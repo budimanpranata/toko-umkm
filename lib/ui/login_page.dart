@@ -17,7 +17,7 @@ class _LoginPageState extends State<LoginPage> {
   final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _isPasswordVisible = false;
-  String _storeName = 'Annisa CP Snack';
+  String _storeName = 'Aplikasi UMKM Anggota Nurinsani';
   String? _storeLogo;
 
   @override
@@ -30,7 +30,8 @@ class _LoginPageState extends State<LoginPage> {
     final prefs = await SharedPreferences.getInstance();
     if (mounted) {
       setState(() {
-        _storeName = prefs.getString('storeName') ?? 'Annisa CP Snack';
+        _storeName =
+            prefs.getString('storeName') ?? 'Aplikasi UMKM Anggota Nurinsani';
         _storeLogo = prefs.getString('storeLogo');
       });
     }
@@ -134,7 +135,7 @@ class _LoginPageState extends State<LoginPage> {
           actions: [
             ElevatedButton(
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFFFA751),
+                backgroundColor: const Color(0xFF2E7D32),
                 foregroundColor: Colors.white,
               ),
               onPressed: () async {
@@ -170,10 +171,7 @@ class _LoginPageState extends State<LoginPage> {
       body: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
-            colors: [
-              Color(0xFFFFA751),
-              Color(0xFFFFE259),
-            ], // Nuansa hangat ala snack
+            colors: [Colors.white, Color(0xFFC8E6C9)],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
@@ -277,7 +275,7 @@ class _LoginPageState extends State<LoginPage> {
                         child: ElevatedButton(
                           onPressed: _login,
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFFFFA751),
+                            backgroundColor: const Color(0xFF2E7D32),
                             foregroundColor: Colors.white,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(16),

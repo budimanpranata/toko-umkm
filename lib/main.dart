@@ -27,10 +27,10 @@ class MyApp extends StatelessWidget {
     return MultiBlocProvider(
       providers: [BlocProvider(create: (context) => ProductBloc())],
       child: MaterialApp.router(
-        title: 'Toko Snack Anisa',
+        title: 'Aplikasi  Kasir UMKM Anggota Nurinsani ',
         debugShowCheckedModeBanner: false,
         theme: ThemeData(
-          colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFFFFA751)),
+          colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF2E7D32)),
           useMaterial3: true,
         ),
         routerConfig: _router,

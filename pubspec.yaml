@@ -107,4 +107,4 @@ flutter:
 flutter_icons:
   android: true
   ios: true
-  image_path: "assets/playstore_icon.png"
+  image_path: "assets/logo.png"

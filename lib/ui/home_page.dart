@@ -29,7 +29,7 @@ class _HomePageState extends State<HomePage> {
   final TextEditingController _penjualanSearchController =
       TextEditingController();
   String _username = 'Admin';
-  String _storeName = 'Toko Snack Anisa';
+  String _storeName = 'Aplikasi Kasir UMKM Anggota Nurinsani';
   String? _storeLogo;
   String _storeAddress = '';
 
@@ -45,7 +45,9 @@ class _HomePageState extends State<HomePage> {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
       _username = prefs.getString('username') ?? 'Admin';
-      _storeName = prefs.getString('storeName') ?? 'Toko Snack Anisa';
+      _storeName =
+          prefs.getString('storeName') ??
+          'Aplikasi Kasir UMKM Anggota Nurinsani';
       _storeLogo = prefs.getString('storeLogo');
       _storeAddress = prefs.getString('storeAddress') ?? '';
     });
@@ -247,7 +249,7 @@ class _HomePageState extends State<HomePage> {
                           }
                           : null,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFFFA751),
+                    backgroundColor: const Color(0xFF2E7D32),
                     foregroundColor: Colors.white,
                   ),
                   child: const Text(
@@ -418,9 +420,9 @@ class _HomePageState extends State<HomePage> {
                         builder: (context, snapshot) {
                           if (snapshot.connectionState ==
                               ConnectionState.waiting) {
-                            return const Center(
+                            return Center(
                               child: CircularProgressIndicator(
-                                color: Colors.orange,
+                                color: Colors.green.shade700,
                               ),
                             );
                           } else if (snapshot.hasError) {
@@ -496,10 +498,10 @@ class _HomePageState extends State<HomePage> {
                                         child: ExpansionTile(
                                           leading: CircleAvatar(
                                             backgroundColor:
-                                                Colors.orange.shade50,
-                                            child: const Icon(
+                                                Colors.green.shade50,
+                                            child: Icon(
                                               Icons.calendar_month,
-                                              color: Colors.orange,
+                                              color: Colors.green.shade700,
                                             ),
                                           ),
                                           title: Text(
@@ -558,9 +560,11 @@ class _HomePageState extends State<HomePage> {
                                                       _formatCurrency(
                                                         trx.totalPrice,
                                                       ),
-                                                      style: const TextStyle(
+                                                      style: TextStyle(
                                                         color:
-                                                            Colors.deepOrange,
+                                                            Colors
+                                                                .green
+                                                                .shade900,
                                                         fontWeight:
                                                             FontWeight.bold,
                                                         fontSize: 13,
@@ -644,10 +648,10 @@ class _HomePageState extends State<HomePage> {
                                     ),
                                     Text(
                                       _formatCurrency(grandTotal),
-                                      style: const TextStyle(
+                                      style: TextStyle(
                                         fontWeight: FontWeight.bold,
                                         fontSize: 16,
-                                        color: Colors.deepOrange,
+                                        color: Colors.green.shade900,
                                       ),
                                     ),
                                   ],
@@ -674,10 +678,10 @@ class _HomePageState extends State<HomePage> {
                 ),
                 TextButton(
                   onPressed: () => Navigator.pop(context),
-                  child: const Text(
+                  child: Text(
                     'Tutup',
                     style: TextStyle(
-                      color: Colors.orange,
+                      color: Colors.green.shade700,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -829,7 +833,7 @@ class _HomePageState extends State<HomePage> {
                 ),
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFFFA751),
+                    backgroundColor: const Color(0xFF2E7D32),
                     foregroundColor: Colors.white,
                   ),
                   onPressed: () {
@@ -925,9 +929,8 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey.shade100,
       appBar: AppBar(
-        backgroundColor: const Color(0xFFFFA751),
+        backgroundColor: const Color(0xFF2E7D32),
         title: const Text(
           'Beranda',
           style: TextStyle(fontWeight: FontWeight.w800, color: Colors.white),
@@ -948,11 +951,20 @@ class _HomePageState extends State<HomePage> {
           const SizedBox(width: 8),
         ],
       ),
-      body: _buildBody(),
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Colors.white, Color(0xFFC8E6C9)],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+          ),
+        ),
+        child: _buildBody(),
+      ),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _selectedIndex,
         onTap: _onItemTapped,
-        selectedItemColor: const Color(0xFFFFA751),
+        selectedItemColor: const Color(0xFF2E7D32),
         unselectedItemColor: Colors.grey.shade400,
         backgroundColor: Colors.white,
         elevation: 8,
@@ -993,7 +1005,7 @@ class _HomePageState extends State<HomePage> {
   Widget _buildUserInfoCard() {
     return Card(
       elevation: 4,
-      shadowColor: Colors.orange.withOpacity(0.2),
+      shadowColor: Colors.green.withOpacity(0.2),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: Padding(
         padding: const EdgeInsets.all(20.0),
@@ -1002,11 +1014,11 @@ class _HomePageState extends State<HomePage> {
             _storeLogo == null || _storeLogo!.isEmpty
                 ? CircleAvatar(
                   radius: 28,
-                  backgroundColor: Colors.orange.shade100,
-                  child: const Icon(
+                  backgroundColor: Colors.green.shade100,
+                  child: Icon(
                     Icons.storefront,
                     size: 28,
-                    color: Colors.deepOrange,
+                    color: Colors.green.shade900,
                   ),
                 )
                 : CircleAvatar(
@@ -1061,10 +1073,10 @@ class _HomePageState extends State<HomePage> {
             Column(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                const Icon(
+                Icon(
                   Icons.calendar_today,
                   size: 16,
-                  color: Colors.orange,
+                  color: Colors.green.shade700,
                 ),
                 const SizedBox(height: 4),
                 Text(
@@ -1103,8 +1115,10 @@ class _HomePageState extends State<HomePage> {
               child: BlocBuilder<ProductBloc, ProductState>(
                 builder: (context, state) {
                   if (state is ProductLoading) {
-                    return const Center(
-                      child: CircularProgressIndicator(color: Colors.orange),
+                    return Center(
+                      child: CircularProgressIndicator(
+                        color: Colors.green.shade700,
+                      ),
                     );
                   } else if (state is ProductError) {
                     return Center(child: Text('Error: ${state.errorMessage}'));
@@ -1129,8 +1143,8 @@ class _HomePageState extends State<HomePage> {
                             borderRadius: BorderRadius.circular(16),
                             gradient: LinearGradient(
                               colors: [
-                                Colors.orange.shade300,
-                                Colors.deepOrange.shade400,
+                                Colors.green.shade300,
+                                Colors.green.shade700,
                               ],
                             ),
                           ),
@@ -1256,7 +1270,7 @@ class _HomePageState extends State<HomePage> {
               decoration: InputDecoration(
                 hintText: 'Cari produk (nama / inisial)...',
                 hintStyle: TextStyle(fontSize: 14, color: Colors.grey.shade400),
-                prefixIcon: const Icon(Icons.search, color: Colors.orange),
+                prefixIcon: Icon(Icons.search, color: Colors.green.shade700),
                 filled: true,
                 fillColor: Colors.grey.shade50,
                 contentPadding: const EdgeInsets.symmetric(vertical: 0),
@@ -1270,7 +1284,7 @@ class _HomePageState extends State<HomePage> {
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: Colors.orange),
+                  borderSide: BorderSide(color: Colors.green.shade700),
                 ),
               ),
             ),
@@ -1312,7 +1326,10 @@ class _HomePageState extends State<HomePage> {
                       fontSize: 14,
                       color: Colors.grey.shade400,
                     ),
-                    prefixIcon: const Icon(Icons.search, color: Colors.orange),
+                    prefixIcon: Icon(
+                      Icons.search,
+                      color: Colors.green.shade700,
+                    ),
                     filled: true,
                     fillColor: Colors.white,
                     contentPadding: const EdgeInsets.symmetric(vertical: 0),
@@ -1326,7 +1343,7 @@ class _HomePageState extends State<HomePage> {
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(color: Colors.orange),
+                      borderSide: BorderSide(color: Colors.green.shade700),
                     ),
                   ),
                 ),
@@ -1418,8 +1435,8 @@ class _HomePageState extends State<HomePage> {
                 ),
                 Text(
                   _formatCurrency(total),
-                  style: const TextStyle(
-                    color: Colors.deepOrange,
+                  style: TextStyle(
+                    color: Colors.green.shade900,
                     fontWeight: FontWeight.bold,
                     fontSize: 18,
                   ),
@@ -1453,7 +1470,7 @@ class _HomePageState extends State<HomePage> {
                     onPressed: () => _showPaymentDialog(total),
                     style: ElevatedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 14),
-                      backgroundColor: const Color(0xFFFFA751),
+                      backgroundColor: const Color(0xFF2E7D32),
                       foregroundColor: Colors.white,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
@@ -1481,10 +1498,10 @@ class _HomePageState extends State<HomePage> {
     return BlocBuilder<ProductBloc, ProductState>(
       builder: (context, state) {
         if (state is ProductLoading) {
-          return const Center(
+          return Center(
             child: Padding(
               padding: EdgeInsets.all(20),
-              child: CircularProgressIndicator(color: Colors.orange),
+              child: CircularProgressIndicator(color: Colors.green.shade700),
             ),
           );
         } else if (state is ProductError) {
@@ -1527,9 +1544,9 @@ class _HomePageState extends State<HomePage> {
                                   width: 60,
                                   height: 60,
                                   color: Colors.grey.shade200,
-                                  child: const Icon(
+                                  child: Icon(
                                     Icons.fastfood,
-                                    color: Colors.orange,
+                                    color: Colors.green.shade700,
                                   ),
                                 ),
                           )
@@ -1543,9 +1560,9 @@ class _HomePageState extends State<HomePage> {
                                   width: 60,
                                   height: 60,
                                   color: Colors.grey.shade200,
-                                  child: const Icon(
+                                  child: Icon(
                                     Icons.fastfood,
-                                    color: Colors.orange,
+                                    color: Colors.green.shade700,
                                   ),
                                 ),
                           ),
@@ -1565,8 +1582,8 @@ class _HomePageState extends State<HomePage> {
                             const SizedBox(height: 4),
                             Text(
                               _formatCurrency(product.price),
-                              style: const TextStyle(
-                                color: Colors.deepOrange,
+                              style: TextStyle(
+                                color: Colors.green.shade900,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
@@ -1593,7 +1610,7 @@ class _HomePageState extends State<HomePage> {
                           children: [
                             IconButton(
                               icon: const Icon(Icons.remove_circle_outline),
-                              color: Colors.orange,
+                              color: Colors.green.shade700,
                               onPressed: () => _decrementQuantity(product),
                             ),
                             Text(
@@ -1605,7 +1622,7 @@ class _HomePageState extends State<HomePage> {
                             ),
                             IconButton(
                               icon: const Icon(Icons.add_circle_outline),
-                              color: Colors.orange,
+                              color: Colors.green.shade700,
                               onPressed: () => _incrementQuantity(product),
                             ),
                           ],
@@ -1615,8 +1632,8 @@ class _HomePageState extends State<HomePage> {
                           children: [
                             Text(
                               _formatCurrency(product.price),
-                              style: const TextStyle(
-                                color: Colors.deepOrange,
+                              style: TextStyle(
+                                color: Colors.green.shade900,
                                 fontWeight: FontWeight.bold,
                                 fontSize: 15,
                               ),
@@ -1667,9 +1684,9 @@ class _SettingsTabScreen extends StatelessWidget {
           Container(
             color: Colors.white,
             child: const TabBar(
-              labelColor: Color(0xFFFFA751),
+              labelColor: Color(0xFF2E7D32),
               unselectedLabelColor: Colors.grey,
-              indicatorColor: Color(0xFFFFA751),
+              indicatorColor: Color(0xFF2E7D32),
               labelPadding: EdgeInsets.symmetric(horizontal: 8),
               tabs: [
                 Tab(text: 'Tambah Produk'),
@@ -1756,8 +1773,8 @@ class _StoreSettingsFormState extends State<_StoreSettingsForm> {
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
-      return const Center(
-        child: CircularProgressIndicator(color: Colors.orange),
+      return Center(
+        child: CircularProgressIndicator(color: Colors.green.shade700),
       );
     }
     return SingleChildScrollView(
@@ -1839,19 +1856,19 @@ class _StoreSettingsFormState extends State<_StoreSettingsForm> {
                     child:
                         _selectedImagePath == null ||
                                 _selectedImagePath!.isEmpty
-                            ? const Column(
+                            ? Column(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
                                 Icon(
                                   Icons.add_photo_alternate_outlined,
                                   size: 32,
-                                  color: Colors.orange,
+                                  color: Colors.green.shade700,
                                 ),
                                 SizedBox(height: 8),
                                 Text(
                                   'Pilih Logo',
                                   style: TextStyle(
-                                    color: Colors.orange,
+                                    color: Colors.green.shade700,
                                     fontSize: 12,
                                   ),
                                 ),
@@ -1873,7 +1890,7 @@ class _StoreSettingsFormState extends State<_StoreSettingsForm> {
                   child: ElevatedButton(
                     onPressed: _save,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFFFA751),
+                      backgroundColor: const Color(0xFF2E7D32),
                       foregroundColor: Colors.white,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
@@ -1982,8 +1999,8 @@ class _PencatatanScreenState extends State<_PencatatanScreen> {
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
-      return const Center(
-        child: CircularProgressIndicator(color: Colors.orange),
+      return Center(
+        child: CircularProgressIndicator(color: Colors.green.shade700),
       );
     }
 
@@ -2069,20 +2086,20 @@ class _PencatatanScreenState extends State<_PencatatanScreen> {
                           vertical: 0,
                         ),
                         decoration: BoxDecoration(
-                          color: Colors.orange.shade50,
+                          color: Colors.green.shade50,
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: DropdownButtonHideUnderline(
                           child: DropdownButton<String>(
                             value: _selectedFilter,
-                            icon: const Icon(
+                            icon: Icon(
                               Icons.arrow_drop_down,
-                              color: Colors.orange,
+                              color: Colors.green.shade700,
                               size: 20,
                             ),
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 13,
-                              color: Colors.orange,
+                              color: Colors.green.shade700,
                               fontWeight: FontWeight.bold,
                             ),
                             items:
@@ -2141,7 +2158,11 @@ class _PencatatanScreenState extends State<_PencatatanScreen> {
                     ],
                   ),
                   const SizedBox(height: 8),
-                  _buildReportRow('Sisa Hutang', sisaHutang, Colors.orange),
+                  _buildReportRow(
+                    'Sisa Hutang',
+                    sisaHutang,
+                    Colors.green.shade700,
+                  ),
                 ],
               ),
             ),
@@ -2235,7 +2256,7 @@ class _PencatatanScreenState extends State<_PencatatanScreen> {
                       child: ElevatedButton(
                         onPressed: _submit,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFFFFA751),
+                          backgroundColor: const Color(0xFF2E7D32),
                           foregroundColor: Colors.white,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
@@ -2283,8 +2304,8 @@ class _PencatatanScreenState extends State<_PencatatanScreen> {
                 iconColor = Colors.red;
                 iconData = Icons.arrow_outward;
               } else if (isHutang) {
-                bgColor = Colors.orange.shade50;
-                iconColor = Colors.orange;
+                bgColor = Colors.green.shade50;
+                iconColor = Colors.green.shade700;
                 iconData = Icons.account_balance_wallet;
               } else if (isAngsuran) {
                 bgColor = Colors.blue.shade50;
@@ -2544,18 +2565,20 @@ class _TambahProdukFormState extends State<_TambahProdukForm> {
                     ),
                     child:
                         _selectedImagePath == null
-                            ? const Column(
+                            ? Column(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
                                 Icon(
                                   Icons.add_photo_alternate_outlined,
                                   size: 40,
-                                  color: Colors.orange,
+                                  color: Colors.green.shade700,
                                 ),
                                 SizedBox(height: 8),
                                 Text(
                                   'Pilih Gambar',
-                                  style: TextStyle(color: Colors.orange),
+                                  style: TextStyle(
+                                    color: Colors.green.shade700,
+                                  ),
                                 ),
                               ],
                             )
@@ -2581,7 +2604,7 @@ class _TambahProdukFormState extends State<_TambahProdukForm> {
                   child: ElevatedButton(
                     onPressed: _submit,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFFFA751),
+                      backgroundColor: const Color(0xFF2E7D32),
                       foregroundColor: Colors.white,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
