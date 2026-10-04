@@ -10,6 +10,9 @@ import 'package:share_plus/share_plus.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path/path.dart' as path;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
 import '../../bloc/product_bloc.dart';
 import '../model/product_model.dart';
 import '../model/transaction_model.dart';
@@ -157,22 +160,27 @@ class _HomePageState extends State<HomePage> {
 
     if (confirm == true) {
       final prefs = await SharedPreferences.getInstance();
-      await prefs.clear();
+      await prefs.remove('isLoggedIn');
+      await prefs.remove('username');
       if (mounted) context.go('/login');
     }
   }
 
   void _showPaymentDialog(double total) {
     final cashController = TextEditingController();
+    final discountController = TextEditingController();
     double cashReceived = 0;
+    double discount = 0;
 
     showDialog(
       context: context,
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setStateDialog) {
-            double change = cashReceived - total;
-            bool isValid = cashReceived >= total;
+            double finalTotal = total - discount;
+            if (finalTotal < 0) finalTotal = 0;
+            double change = cashReceived - finalTotal;
+            bool isValid = cashReceived >= finalTotal;
 
             return AlertDialog(
               title: const Text(
@@ -187,6 +195,30 @@ class _HomePageState extends State<HomePage> {
                     'Total Belanja: ${_formatCurrency(total)}',
                     style: const TextStyle(fontSize: 16),
                   ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: discountController,
+                    keyboardType: TextInputType.number,
+                    decoration: InputDecoration(
+                      labelText: 'Diskon (Nominal)',
+                      prefixText: 'Rp ',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    onChanged: (value) {
+                      setStateDialog(() {
+                        discount = double.tryParse(value) ?? 0;
+                      });
+                    },
+                  ),
+                  if (discount > 0) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      'Total Setelah Diskon: ${_formatCurrency(finalTotal)}',
+                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.blueAccent),
+                    ),
+                  ],
                   const SizedBox(height: 16),
                   TextField(
                     controller: cashController,
@@ -232,7 +264,7 @@ class _HomePageState extends State<HomePage> {
                             await DatabaseHelper.instance.processTransaction(
                               _cartProducts,
                               _cartQuantities,
-                              total,
+                              finalTotal,
                             );
                             _clearCart();
                             if (context.mounted) {
@@ -253,7 +285,52 @@ class _HomePageState extends State<HomePage> {
                     foregroundColor: Colors.white,
                   ),
                   child: const Text(
-                    'Konfirmasi',
+                    'Simpan',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ),
+                ElevatedButton(
+                  onPressed:
+                      isValid
+                          ? () async {
+                            final cartList = _cartProducts.keys.map((id) {
+                              final product = _cartProducts[id]!;
+                              final qty = _cartQuantities[id]!;
+                              return {
+                                'name': product.name,
+                                'qty': qty,
+                                'price': product.price,
+                                'total': product.price * qty
+                              };
+                            }).toList();
+
+                            await DatabaseHelper.instance.processTransaction(
+                              _cartProducts,
+                              _cartQuantities,
+                              finalTotal,
+                            );
+                            _clearCart();
+
+                            if (context.mounted) {
+                              Navigator.pop(context);
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Pembayaran berhasil! Menyiapkan struk...'),
+                                ),
+                              );
+                              context.read<ProductBloc>().add(
+                                const LoadProducts(),
+                              );
+                              _printReceipt(cartList, total, discount, finalTotal, cashReceived, change);
+                            }
+                          }
+                          : null,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.blueAccent,
+                    foregroundColor: Colors.white,
+                  ),
+                  child: const Text(
+                    'Simpan & Cetak',
                     style: TextStyle(fontWeight: FontWeight.bold),
                   ),
                 ),
@@ -262,6 +339,102 @@ class _HomePageState extends State<HomePage> {
           },
         );
       },
+    );
+  }
+
+  Future<void> _printReceipt(List<Map<String, dynamic>> cartList, double subtotal, double discount, double finalTotal, double cashReceived, double change) async {
+    final pdf = pw.Document();
+
+    final storeName = _storeName;
+    final storeAddress = _storeAddress;
+
+    pdf.addPage(
+      pw.Page(
+        pageFormat: PdfPageFormat.roll80,
+        build: (pw.Context context) {
+          return pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              pw.Center(
+                child: pw.Text(storeName, style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 16)),
+              ),
+              if (storeAddress.isNotEmpty)
+                pw.Center(
+                  child: pw.Text(storeAddress, style: const pw.TextStyle(fontSize: 10), textAlign: pw.TextAlign.center),
+                ),
+              pw.SizedBox(height: 10),
+              pw.Text('Tanggal: ${DateTime.now().toString().substring(0, 16)}', style: const pw.TextStyle(fontSize: 10)),
+              pw.Divider(),
+              pw.ListView.builder(
+                itemCount: cartList.length,
+                itemBuilder: (context, index) {
+                  final item = cartList[index];
+                  return pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.start,
+                    children: [
+                      pw.Text(item['name'] as String, style: const pw.TextStyle(fontSize: 10)),
+                      pw.Row(
+                        mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                        children: [
+                          pw.Text('${item['qty']} x Rp ${(item['price'] as double).toStringAsFixed(0)}', style: const pw.TextStyle(fontSize: 10)),
+                          pw.Text('Rp ${(item['total'] as double).toStringAsFixed(0)}', style: const pw.TextStyle(fontSize: 10)),
+                        ],
+                      ),
+                      pw.SizedBox(height: 4),
+                    ],
+                  );
+                },
+              ),
+              pw.Divider(),
+              pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                children: [
+                  pw.Text('Subtotal', style: const pw.TextStyle(fontSize: 10)),
+                  pw.Text('Rp ${subtotal.toStringAsFixed(0)}', style: const pw.TextStyle(fontSize: 10)),
+                ],
+              ),
+              if (discount > 0)
+                pw.Row(
+                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                  children: [
+                    pw.Text('Diskon', style: const pw.TextStyle(fontSize: 10)),
+                    pw.Text('- Rp ${discount.toStringAsFixed(0)}', style: const pw.TextStyle(fontSize: 10)),
+                  ],
+                ),
+              pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                children: [
+                  pw.Text('Total', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 12)),
+                  pw.Text('Rp ${finalTotal.toStringAsFixed(0)}', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 12)),
+                ],
+              ),
+              pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                children: [
+                  pw.Text('Tunai', style: const pw.TextStyle(fontSize: 10)),
+                  pw.Text('Rp ${cashReceived.toStringAsFixed(0)}', style: const pw.TextStyle(fontSize: 10)),
+                ],
+              ),
+              pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                children: [
+                  pw.Text('Kembalian', style: const pw.TextStyle(fontSize: 10)),
+                  pw.Text('Rp ${change.toStringAsFixed(0)}', style: const pw.TextStyle(fontSize: 10)),
+                ],
+              ),
+              pw.SizedBox(height: 20),
+              pw.Center(
+                child: pw.Text('Terima Kasih', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 12)),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+
+    await Printing.layoutPdf(
+      onLayout: (PdfPageFormat format) async => pdf.save(),
+      name: 'Struk_Penjualan_${DateTime.now().millisecondsSinceEpoch}',
     );
   }
 
@@ -1678,7 +1851,7 @@ class _SettingsTabScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
-      length: 3,
+      length: 4,
       child: Column(
         children: [
           Container(
@@ -1692,6 +1865,7 @@ class _SettingsTabScreen extends StatelessWidget {
                 Tab(text: 'Tambah Produk'),
                 Tab(text: 'Pencatatan'),
                 Tab(text: 'Settings'),
+                Tab(text: 'Cash Count'),
               ],
             ),
           ),
@@ -1703,6 +1877,7 @@ class _SettingsTabScreen extends StatelessWidget {
                 _StoreSettingsForm(
                   onSave: onSettingsSaved,
                 ), // Tab 3: Pengaturan Toko
+                const _CashCountScreen(), // Tab 4: Cash Count
               ],
             ),
           ),
@@ -2623,6 +2798,202 @@ class _TambahProdukFormState extends State<_TambahProdukForm> {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _CashCountScreen extends StatefulWidget {
+  const _CashCountScreen();
+
+  @override
+  State<_CashCountScreen> createState() => _CashCountScreenState();
+}
+
+class _CashCountScreenState extends State<_CashCountScreen> {
+  final Map<int, TextEditingController> _controllers = {
+    100000: TextEditingController(),
+    50000: TextEditingController(),
+    20000: TextEditingController(),
+    10000: TextEditingController(),
+    5000: TextEditingController(),
+    2000: TextEditingController(),
+    1000: TextEditingController(),
+    500: TextEditingController(),
+    200: TextEditingController(),
+    100: TextEditingController(),
+  };
+
+  double _totalCashCount = 0;
+  double _totalSales = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadTotalSales();
+    for (var controller in _controllers.values) {
+      controller.addListener(_calculateTotal);
+    }
+  }
+
+  @override
+  void dispose() {
+    for (var controller in _controllers.values) {
+      controller.dispose();
+    }
+    super.dispose();
+  }
+
+  Future<void> _loadTotalSales() async {
+    final transactions = await DatabaseHelper.instance.readAllTransactions();
+    double total = transactions.fold(0.0, (sum, item) => sum + item.totalPrice);
+    setState(() {
+      _totalSales = total;
+    });
+
+    final savedCashCount = await DatabaseHelper.instance.getLatestCashCount();
+    if (savedCashCount != null) {
+      _controllers[100000]!.text = savedCashCount['c100k'] > 0 ? savedCashCount['c100k'].toString() : '';
+      _controllers[50000]!.text = savedCashCount['c50k'] > 0 ? savedCashCount['c50k'].toString() : '';
+      _controllers[20000]!.text = savedCashCount['c20k'] > 0 ? savedCashCount['c20k'].toString() : '';
+      _controllers[10000]!.text = savedCashCount['c10k'] > 0 ? savedCashCount['c10k'].toString() : '';
+      _controllers[5000]!.text = savedCashCount['c5k'] > 0 ? savedCashCount['c5k'].toString() : '';
+      _controllers[2000]!.text = savedCashCount['c2k'] > 0 ? savedCashCount['c2k'].toString() : '';
+      _controllers[1000]!.text = savedCashCount['c1k'] > 0 ? savedCashCount['c1k'].toString() : '';
+      _controllers[500]!.text = savedCashCount['c500'] > 0 ? savedCashCount['c500'].toString() : '';
+      _controllers[200]!.text = savedCashCount['c200'] > 0 ? savedCashCount['c200'].toString() : '';
+      _controllers[100]!.text = savedCashCount['c100'] > 0 ? savedCashCount['c100'].toString() : '';
+      _calculateTotal();
+    }
+  }
+
+  void _calculateTotal() {
+    double total = 0;
+    _controllers.forEach((nominal, controller) {
+      int count = int.tryParse(controller.text) ?? 0;
+      total += nominal * count;
+    });
+    setState(() {
+      _totalCashCount = total;
+    });
+  }
+
+  String _formatCurrency(double amount) {
+    String result = amount.toStringAsFixed(0);
+    result = result.replaceAllMapped(
+      RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+      (Match m) => '${m[1]}.',
+    );
+    return 'Rp $result';
+  }
+
+  Future<void> _saveCashCount() async {
+    final data = {
+      'date': DateTime.now().toIso8601String(),
+      'c100k': int.tryParse(_controllers[100000]!.text) ?? 0,
+      'c50k': int.tryParse(_controllers[50000]!.text) ?? 0,
+      'c20k': int.tryParse(_controllers[20000]!.text) ?? 0,
+      'c10k': int.tryParse(_controllers[10000]!.text) ?? 0,
+      'c5k': int.tryParse(_controllers[5000]!.text) ?? 0,
+      'c2k': int.tryParse(_controllers[2000]!.text) ?? 0,
+      'c1k': int.tryParse(_controllers[1000]!.text) ?? 0,
+      'c500': int.tryParse(_controllers[500]!.text) ?? 0,
+      'c200': int.tryParse(_controllers[200]!.text) ?? 0,
+      'c100': int.tryParse(_controllers[100]!.text) ?? 0,
+    };
+    await DatabaseHelper.instance.saveCashCount(data);
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Cash Count berhasil disimpan')),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        children: [
+          Card(
+            elevation: 2,
+            color: Colors.green.shade50,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('Total Penjualan', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black87)),
+                      const SizedBox(height: 4),
+                      Text(_formatCurrency(_totalSales), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF2E7D32))),
+                    ],
+                  ),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      const Text('Total Cash Count', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black87)),
+                      const SizedBox(height: 4),
+                      Text(_formatCurrency(_totalCashCount), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.blueAccent)),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Expanded(
+            child: ListView(
+              children: _controllers.keys.map((nominal) {
+                return Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 6.0),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        flex: 2,
+                        child: Text(_formatCurrency(nominal.toDouble()), style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
+                      ),
+                      const Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 8.0),
+                        child: Text('x', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                      ),
+                      Expanded(
+                        flex: 3,
+                        child: TextField(
+                          controller: _controllers[nominal],
+                          keyboardType: TextInputType.number,
+                          decoration: InputDecoration(
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                            isDense: true,
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                            hintText: '0',
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }).toList(),
+            ),
+          ),
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: _saveCashCount,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF2E7D32),
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              child: const Text('Simpan Cash Count', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            ),
+          ),
+        ],
       ),
     );
   }

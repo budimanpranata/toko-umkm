@@ -23,7 +23,7 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 6,
+      version: 7,
       onCreate: _createDB,
       onUpgrade: _upgradeDB,
     );
@@ -86,6 +86,24 @@ class DatabaseHelper {
       date TEXT NOT NULL
     )
     ''');
+
+    await db.execute('''
+    CREATE TABLE cash_counts (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      date TEXT NOT NULL,
+      c100k INTEGER NOT NULL DEFAULT 0,
+      c50k INTEGER NOT NULL DEFAULT 0,
+      c20k INTEGER NOT NULL DEFAULT 0,
+      c10k INTEGER NOT NULL DEFAULT 0,
+      c5k INTEGER NOT NULL DEFAULT 0,
+      c2k INTEGER NOT NULL DEFAULT 0,
+      c1k INTEGER NOT NULL DEFAULT 0,
+      c500 INTEGER NOT NULL DEFAULT 0,
+      c200 INTEGER NOT NULL DEFAULT 0,
+      c100 INTEGER NOT NULL DEFAULT 0
+    )
+    ''');
+
 
     // Menyisipkan data dummy awal
     await db.insert('products', {
@@ -168,6 +186,24 @@ class DatabaseHelper {
         amount REAL NOT NULL,
         description TEXT NOT NULL,
         date TEXT NOT NULL
+      )
+      ''');
+    }
+    if (oldVersion < 7) {
+      await db.execute('''
+      CREATE TABLE cash_counts (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        date TEXT NOT NULL,
+        c100k INTEGER NOT NULL DEFAULT 0,
+        c50k INTEGER NOT NULL DEFAULT 0,
+        c20k INTEGER NOT NULL DEFAULT 0,
+        c10k INTEGER NOT NULL DEFAULT 0,
+        c5k INTEGER NOT NULL DEFAULT 0,
+        c2k INTEGER NOT NULL DEFAULT 0,
+        c1k INTEGER NOT NULL DEFAULT 0,
+        c500 INTEGER NOT NULL DEFAULT 0,
+        c200 INTEGER NOT NULL DEFAULT 0,
+        c100 INTEGER NOT NULL DEFAULT 0
       )
       ''');
     }
@@ -362,5 +398,20 @@ class DatabaseHelper {
       where: 'id = ?',
       whereArgs: [id],
     );
+  }
+
+  Future<int> saveCashCount(Map<String, dynamic> cashCountData) async {
+    final db = await instance.database;
+    await db.delete('cash_counts'); // Hapus yang lama agar hanya simpan 1 sesi terbaru
+    return await db.insert('cash_counts', cashCountData);
+  }
+
+  Future<Map<String, dynamic>?> getLatestCashCount() async {
+    final db = await instance.database;
+    final result = await db.query('cash_counts', orderBy: 'id DESC', limit: 1);
+    if (result.isNotEmpty) {
+      return result.first;
+    }
+    return null;
   }
 }
