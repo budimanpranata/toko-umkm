@@ -30,8 +30,7 @@ class _LoginPageState extends State<LoginPage> {
     final prefs = await SharedPreferences.getInstance();
     if (mounted) {
       setState(() {
-        _storeName =
-            prefs.getString('storeName') ?? 'Aplikasi UMKM Anggota Nurinsani';
+        _storeName = prefs.getString('storeName') ?? 'Aplikasi UMKM';
         _storeLogo = prefs.getString('storeLogo');
       });
     }

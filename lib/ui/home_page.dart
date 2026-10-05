@@ -13,10 +13,13 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
+import 'package:file_picker/file_picker.dart';
 import '../../bloc/product_bloc.dart';
 import '../model/product_model.dart';
 import '../model/transaction_model.dart';
 import '../database_helper.dart';
+import '../backup_service.dart';
+import 'create_po_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -35,13 +38,22 @@ class _HomePageState extends State<HomePage> {
   String _storeName = 'Aplikasi Kasir UMKM Anggota Nurinsani';
   String? _storeLogo;
   String _storeAddress = '';
+  List<Product> _lowStockProducts = [];
 
   @override
   void initState() {
     super.initState();
     _loadSettings();
+    _loadLowStockProducts();
     // Memicu event BLoC untuk mengambil data saat halaman dimuat
     context.read<ProductBloc>().add(LoadProducts());
+  }
+
+  Future<void> _loadLowStockProducts() async {
+    final products = await DatabaseHelper.instance.getLowStockProducts(
+      threshold: lowStockThreshold,
+    );
+    if (mounted) setState(() => _lowStockProducts = products);
   }
 
   Future<void> _loadSettings() async {
@@ -88,6 +100,9 @@ class _HomePageState extends State<HomePage> {
     setState(() {
       _selectedIndex = index;
     });
+    // Stok bisa berubah dari tab lain (transaksi, tambah produk, restore),
+    // jadi hitung ulang daftar Create PO setiap kali kembali ke Home.
+    if (index == 0) _loadLowStockProducts();
   }
 
   void _incrementQuantity(Product product) {
@@ -1166,6 +1181,13 @@ class _HomePageState extends State<HomePage> {
         children: [
           _buildUserInfoCard(),
           const SizedBox(height: 20),
+          BlocListener<ProductBloc, ProductState>(
+            listener: (context, state) {
+              if (state is ProductLoaded) _loadLowStockProducts();
+            },
+            child: _buildCreatePoCard(),
+          ),
+          const SizedBox(height: 20),
           _buildCarouselCard(),
           const SizedBox(height: 20),
           _buildProductListCard(),
@@ -1261,6 +1283,128 @@ class _HomePageState extends State<HomePage> {
                 ),
               ],
             ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // CARD: Create PO dari produk yang stoknya hampir habis
+  Widget _buildCreatePoCard() {
+    final count = _lowStockProducts.length;
+    final hasLowStock = count > 0;
+    final accent = hasLowStock ? Colors.orange.shade800 : Colors.green.shade700;
+
+    return Card(
+      elevation: 4,
+      shadowColor: Colors.black12,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.assignment_rounded, color: accent),
+                const SizedBox(width: 8),
+                const Expanded(
+                  child: Text(
+                    'Create PO',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: accent.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    hasLowStock ? '$count produk' : 'Stok aman',
+                    style: TextStyle(
+                      color: accent,
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              hasLowStock
+                  ? 'Produk dengan sisa stok di bawah $lowStockThreshold pack/bungkus:'
+                  : 'Tidak ada produk dengan sisa stok di bawah $lowStockThreshold pack/bungkus.',
+              style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
+            ),
+            if (hasLowStock) ...[
+              const SizedBox(height: 8),
+              for (final product in _lowStockProducts.take(3))
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 2),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          product.name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      Text(
+                        'Sisa ${product.stock}',
+                        style: TextStyle(
+                          color:
+                              product.stock <= 0
+                                  ? Colors.red
+                                  : Colors.orange.shade800,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              if (count > 3)
+                Text(
+                  '+${count - 3} produk lainnya',
+                  style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                ),
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                height: 44,
+                child: ElevatedButton.icon(
+                  onPressed: () async {
+                    await Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder:
+                            (_) => CreatePoPage(
+                              storeName: _storeName,
+                              storeAddress: _storeAddress,
+                            ),
+                      ),
+                    );
+                    _loadLowStockProducts();
+                  },
+                  icon: const Icon(Icons.add_shopping_cart_rounded),
+                  label: const Text(
+                    'Buat PO',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF2E7D32),
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ],
         ),
       ),
@@ -1851,7 +1995,7 @@ class _SettingsTabScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
-      length: 4,
+      length: 5,
       child: Column(
         children: [
           Container(
@@ -1860,12 +2004,15 @@ class _SettingsTabScreen extends StatelessWidget {
               labelColor: Color(0xFF2E7D32),
               unselectedLabelColor: Colors.grey,
               indicatorColor: Color(0xFF2E7D32),
-              labelPadding: EdgeInsets.symmetric(horizontal: 8),
+              isScrollable: true,
+              tabAlignment: TabAlignment.start,
+              labelPadding: EdgeInsets.symmetric(horizontal: 12),
               tabs: [
                 Tab(text: 'Tambah Produk'),
                 Tab(text: 'Pencatatan'),
                 Tab(text: 'Settings'),
                 Tab(text: 'Cash Count'),
+                Tab(text: 'Backup'),
               ],
             ),
           ),
@@ -1878,6 +2025,9 @@ class _SettingsTabScreen extends StatelessWidget {
                   onSave: onSettingsSaved,
                 ), // Tab 3: Pengaturan Toko
                 const _CashCountScreen(), // Tab 4: Cash Count
+                _BackupRestoreScreen(
+                  onRestored: onSettingsSaved,
+                ), // Tab 5: Backup & Restore
               ],
             ),
           ),
@@ -2992,6 +3142,198 @@ class _CashCountScreenState extends State<_CashCountScreen> {
               ),
               child: const Text('Simpan Cash Count', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _BackupRestoreScreen extends StatefulWidget {
+  final VoidCallback onRestored;
+  const _BackupRestoreScreen({required this.onRestored});
+
+  @override
+  State<_BackupRestoreScreen> createState() => _BackupRestoreScreenState();
+}
+
+class _BackupRestoreScreenState extends State<_BackupRestoreScreen> {
+  bool _isBusy = false;
+
+  void _showMessage(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  Future<void> _backup() async {
+    setState(() => _isBusy = true);
+    try {
+      final file = await BackupService.createBackup();
+      await Share.shareXFiles([
+        XFile(file.path),
+      ], text: 'Backup data Toko Snack');
+    } catch (e) {
+      _showMessage('Gagal membuat backup: $e');
+    } finally {
+      if (mounted) setState(() => _isBusy = false);
+    }
+  }
+
+  String _formatDate(DateTime? date) {
+    if (date == null) return '-';
+    String two(int n) => n.toString().padLeft(2, '0');
+    return '${two(date.day)}/${two(date.month)}/${date.year} '
+        '${two(date.hour)}:${two(date.minute)}';
+  }
+
+  Future<void> _restore() async {
+    final result = await FilePicker.pickFiles(type: FileType.any);
+    final filePath = result?.files.single.path;
+    if (filePath == null) return;
+
+    setState(() => _isBusy = true);
+    try {
+      final data = await BackupService.readBackup(File(filePath));
+      final tables = data['tables'] as Map;
+      int count(String table) => (tables[table] as List?)?.length ?? 0;
+      final createdAt = DateTime.tryParse(data['createdAt'] as String? ?? '');
+      if (!mounted) return;
+
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder:
+            (ctx) => AlertDialog(
+              title: const Text('Restore Data?'),
+              content: Text(
+                'Tanggal backup: ${_formatDate(createdAt)}\n'
+                'Produk: ${count('products')}\n'
+                'Transaksi: ${count('transactions')}\n'
+                'Catatan keuangan: ${count('financial_records')}\n\n'
+                'SEMUA data saat ini akan DIGANTI dengan isi backup. Lanjutkan?',
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx, false),
+                  child: const Text('Batal'),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx, true),
+                  style: TextButton.styleFrom(foregroundColor: Colors.red),
+                  child: const Text('Ya, Restore'),
+                ),
+              ],
+            ),
+      );
+      if (confirmed != true) return;
+
+      await BackupService.restoreBackup(data);
+      if (!mounted) return;
+      context.read<ProductBloc>().add(LoadProducts());
+      widget.onRestored();
+      _showMessage('Data berhasil di-restore!');
+    } on FormatException catch (e) {
+      _showMessage(e.message);
+    } catch (e) {
+      _showMessage('Gagal restore: $e');
+    } finally {
+      if (mounted) setState(() => _isBusy = false);
+    }
+  }
+
+  Widget _buildActionCard({
+    required IconData icon,
+    required String title,
+    required String description,
+    required String buttonText,
+    required Color color,
+    required VoidCallback onPressed,
+  }) {
+    return Card(
+      elevation: 4,
+      shadowColor: Colors.black12,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      child: Padding(
+        padding: const EdgeInsets.all(20.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(icon, color: color, size: 28),
+                const SizedBox(width: 12),
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Text(description, style: const TextStyle(color: Colors.black54)),
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              height: 50,
+              child: ElevatedButton(
+                onPressed: _isBusy ? null : onPressed,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: color,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: Text(
+                  buttonText,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        children: [
+          if (_isBusy)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 16),
+              child: LinearProgressIndicator(color: Colors.green.shade700),
+            ),
+          _buildActionCard(
+            icon: Icons.backup_rounded,
+            title: 'Backup Data',
+            description:
+                'Simpan semua data (produk, transaksi, pencatatan keuangan, '
+                'cash count, akun, pengaturan & logo toko) ke satu file. '
+                'Kirim file ke Google Drive, WhatsApp, atau simpan di HP.',
+            buttonText: 'Buat Backup',
+            color: const Color(0xFF2E7D32),
+            onPressed: _backup,
+          ),
+          const SizedBox(height: 16),
+          _buildActionCard(
+            icon: Icons.restore_rounded,
+            title: 'Restore Data',
+            description:
+                'Pulihkan data dari file backup (.json). '
+                'Perhatian: semua data saat ini akan diganti dengan isi backup.',
+            buttonText: 'Pilih File Backup',
+            color: Colors.orange.shade800,
+            onPressed: _restore,
           ),
         ],
       ),

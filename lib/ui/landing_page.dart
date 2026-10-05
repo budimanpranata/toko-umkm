@@ -25,8 +25,7 @@ class _LandingPageState extends State<LandingPage> {
     if (mounted) {
       setState(() {
         _storeLogo = prefs.getString('storeLogo');
-        _storeName =
-            prefs.getString('storeName') ?? 'Aplikasi UMKM Anggota NURISANI';
+        _storeName = prefs.getString('storeName') ?? 'Aplikasi UMKM';
       });
     }
 

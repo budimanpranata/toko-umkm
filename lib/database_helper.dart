@@ -225,6 +225,18 @@ class DatabaseHelper {
     return result.map((json) => Product.fromMap(json)).toList();
   }
 
+  /// Produk dengan sisa stok di bawah [threshold], stok paling sedikit di atas.
+  Future<List<Product>> getLowStockProducts({int threshold = 5}) async {
+    final db = await instance.database;
+    final result = await db.query(
+      'products',
+      where: 'stock < ?',
+      whereArgs: [threshold],
+      orderBy: 'stock ASC, name ASC',
+    );
+    return result.map((json) => Product.fromMap(json)).toList();
+  }
+
   Future<List<Product>> getFastMovingProducts() async {
     final db = await instance.database;
     // Mengambil tanggal 90 hari ke belakang dengan format ISO 8601
